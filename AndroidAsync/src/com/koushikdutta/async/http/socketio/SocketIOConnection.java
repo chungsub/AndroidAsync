@@ -108,12 +108,21 @@ class SocketIOConnection {
         .then(new TransformFuture<SocketIOTransport, String>() {
             @Override
             protected void transform(String result) throws Exception {
+                // check global namespace authorization error
+                if (TextUtils.equals(result, "handshake bad origin") ||
+                    TextUtils.equals(result, "handshake error") ||
+                    TextUtils.equals(result, "handshake unauthorized")) {
+                    throw new SocketIOException(result);
+                }
+
                 String[] parts = result.split(":");
                 String session = parts[0];
-                if (!"".equals(parts[1]))
+                if (!"".equals(parts[1])) {
                     heartbeat = Integer.parseInt(parts[1]) / 2 * 1000;
-                else
+                }
+                else {
                     heartbeat = 0;
+                }
 
                 String transportsLine = parts[3];
                 String[] transports = transportsLine.split(",");
@@ -412,10 +421,28 @@ class SocketIOConnection {
                                 arguments = new JSONArray(ackParts[1]);
                             ack.acknowledge(arguments);
                             break;
-                        case 7:
+                        case 7: {
                             // error
-                            reportError(parts[2], parts[3]);
-                            break;
+                            Log.v("attach", "parts[2]: " + parts[2]);
+                            Log.v("attach", "parts[3]: " + parts[3]);
+                            String reason = "";
+                            if (TextUtils.equals(parts[3], "0")) {
+                                reason = "transport not supported";
+                            }
+                            else if (TextUtils.equals(parts[3], "1")) {
+                                reason = "client not handshaken";
+                            }
+                            else if (TextUtils.equals(parts[3], "2")) {
+                                reason = "unauthorized";
+                            }
+                            else {
+                                // should not arrive here.
+                                reason = "unknown error";
+                            }
+                            throw new SocketIOException(reason);
+                            //reportError(parts[2], parts[3]);
+                            //break;
+                        }
                         case 8:
                             // noop
                             break;
