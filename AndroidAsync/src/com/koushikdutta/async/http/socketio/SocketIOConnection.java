@@ -423,8 +423,8 @@ class SocketIOConnection {
                             break;
                         case 7: {
                             // error
-                            Log.v("attach", "parts[2]: " + parts[2]);
-                            Log.v("attach", "parts[3]: " + parts[3]);
+                            //Log.v("attach", "parts[2]: " + parts[2]);
+                            //Log.v("attach", "parts[3]: " + parts[3]);
                             String reason = "";
                             if (TextUtils.equals(parts[3], "0")) {
                                 reason = "transport not supported";
