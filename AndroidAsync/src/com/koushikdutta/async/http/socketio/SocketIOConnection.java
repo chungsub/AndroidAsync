@@ -248,13 +248,17 @@ class SocketIOConnection {
                 else {
                     // client has never connected, this is a initial connect failure
                     ConnectCallback callback = client.connectCallback;
-                    if (callback != null)
+                    if (callback != null) {
                         callback.onConnectCompleted(ex, client);
+                    }
                 }
             }
         });
 
-        delayReconnect();
+        String exMessage = ex.getMessage();
+        if (!TextUtils.equals(exMessage, "booted")) {
+            delayReconnect();
+        }
     }
 
     private void reportConnect(String endpoint) {
@@ -376,12 +380,29 @@ class SocketIOConnection {
 //                    Log.d(TAG, "Message: " + message);
                     String[] parts = message.split(":", 4);
                     int code = Integer.parseInt(parts[0]);
+                    String reason = "";
                     switch (code) {
                         case 0:
+                            // disconnect
+                            if (TextUtils.isEmpty(parts[2])) {
+                                if (TextUtils.isEmpty(parts[1])) {
+                                    reason = "booted";
+                                }
+                                else {
+                                    reason = parts[1];
+                                }
+                            }
+                            else {
+                                reason = "booted";
+                            }
+                            
+                            throw new SocketIOException(reason);
+                            /*
                             // disconnect
                             transport.disconnect();
                             reportDisconnect(null);
                             break;
+                            */
                         case 1:
                             // connect
                             reportConnect(parts[2]);
@@ -425,7 +446,6 @@ class SocketIOConnection {
                             // error
                             //Log.v("attach", "parts[2]: " + parts[2]);
                             //Log.v("attach", "parts[3]: " + parts[3]);
-                            String reason = "";
                             if (TextUtils.equals(parts[3], "0")) {
                                 reason = "transport not supported";
                             }
@@ -459,12 +479,14 @@ class SocketIOConnection {
             }
         });
 
+
         // now reconnect all the sockets that may have been previously connected
         select(null, new SelectCallback() {
             @Override
             public void onSelect(SocketIOClient client) {
-                if (TextUtils.isEmpty(client.endpoint))
+                if (TextUtils.isEmpty(client.endpoint)) {
                     return;
+                }
 
                 connect(client);
             }
